@@ -1,17 +1,40 @@
 import React from 'react';
-import { Button, FormGroup, FormControl, ControlLabel } from 'react-bootstrap';
+import { FormGroup, FormControl, ControlLabel } from 'react-bootstrap';
+import { Auth } from 'aws-amplify';
+import { useHistory } from 'react-router-dom';
+
+import { LoaderButton } from "../components/LoaderButton";
+import { useAppContext } from '../libs/contextLib';
+import { useFormFields } from '../libs/hooksLib';
+import { onError } from '../libs/errorLibs';
 import './Login.css';
 
+
 export const Login = () => {
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const history = useHistory();
+  const { userHasAuthenticated } = useAppContext();
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [fields, handleFieldChange] = useFormFields({
+    email: '',
+    password: '',
+  });
 
   const validateForm = () => {
-    return email.length > 0 && password.length > 0;
+    return fields.email.length > 0 && fields.password.length > 0;
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true)
+
+    try {
+      await Auth.signIn(fields.email, fields.password);
+      userHasAuthenticated(true);
+      history.push('/');
+    } catch (e) {
+      onError(e);
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -22,21 +45,27 @@ export const Login = () => {
           <FormControl
             autoFocus
             type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
+            value={fields.email}
+            onChange={handleFieldChange}
           />
         </FormGroup>
         <FormGroup controlId="password" bsSize="large">
           <ControlLabel>Password</ControlLabel>
           <FormControl
             type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
+            value={fields.password}
+            onChange={handleFieldChange}
           />
         </FormGroup>
-        <Button block bsSize="large" disabled={!validateForm()} type="submit">
+        <LoaderButton
+          block
+          isLoading={isLoading}
+          bsSize="large"
+          disabled={!validateForm()}
+          type="submit"
+        >
           Login
-        </Button>
+        </LoaderButton>
       </form>
     </div>
   )
